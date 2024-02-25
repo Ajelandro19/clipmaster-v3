@@ -1,5 +1,7 @@
 import { join } from 'node:path';
-import { app, BrowserWindow, clipboard, ipcMain, globalShortcut } from 'electron';
+import { app, BrowserWindow, clipboard, ipcMain, globalShortcut, Notification, Tray, Menu } from 'electron';
+
+let tray: Tray | null = null;
 
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
@@ -32,12 +34,47 @@ const createWindow = () => {
 
 app.on('ready', () => {
   const browserWindow = createWindow();
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Show Window',
+      click: () => {
+        browserWindow.show();
+        browserWindow.focus();
+      },
+    },
+    {
+      label: 'Quit',
+      role: 'quit',
+    },
+  ]);
+
+  tray = new Tray('./src/icons/trayTemplate.png');
+
+  tray.setContextMenu(contextMenu);
+
+  tray.on('click', () => {
+    browserWindow.show();
+  });
+
   globalShortcut.register('CommandOrControl+Shift+Alt+C', () => {
     app.focus();
     browserWindow.show();
     browserWindow.focus();
 
   });
+
+  globalShortcut.register('CommandOrControl+Shift+Alt+X', () => {
+    let content = clipboard.readText();
+    content = content.toUpperCase();
+    clipboard.writeText(content);
+    new Notification({
+      title: 'Capitalized clipboard text',
+      subtitle: 'Copied to clipboard',
+      body:content,
+    }).show();
+  });
+
 } );
 
 app.on('quit', () => {
