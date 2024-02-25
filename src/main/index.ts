@@ -1,5 +1,7 @@
 import { join } from 'node:path';
-import { app, BrowserWindow, clipboard, ipcMain, globalShortcut, Notification, Tray, Menu } from 'electron';
+import { app, BrowserWindow, clipboard, ipcMain, globalShortcut, Notification, Tray } from 'electron';
+import Positioner from 'electron-positioner'
+
 
 let tray: Tray | null = null;
 
@@ -14,6 +16,7 @@ const createWindow = () => {
     maximizable: false,
     titleBarStyle: 'hidden',
     titleBarOverlay: true,
+    show: false,
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
     },
@@ -27,33 +30,22 @@ const createWindow = () => {
     );
   }
 
-  mainWindow.webContents.openDevTools({ mode: 'detach' });
-
   return mainWindow;
 };
 
 app.on('ready', () => {
   const browserWindow = createWindow();
-
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Show Window',
-      click: () => {
-        browserWindow.show();
-        browserWindow.focus();
-      },
-    },
-    {
-      label: 'Quit',
-      role: 'quit',
-    },
-  ]);
-
   tray = new Tray('./src/icons/trayTemplate.png');
-
-  tray.setContextMenu(contextMenu);
-
+  tray.setIgnoreDoubleClickEvents(true);
+  const positioner = new Positioner(browserWindow);
   tray.on('click', () => {
+    if(!tray) return;
+    if(browserWindow.isVisible()) {
+      return browserWindow.hide();
+    } 
+    const trayPosition = positioner.calculate('trayCenter', tray.getBounds());
+    browserWindow.setPosition(trayPosition.x, trayPosition.y, false);
+
     browserWindow.show();
   });
 
